@@ -51,8 +51,8 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 ### Clone the repo
 Clone the repository and navigate to the directory:
 ```bash
-git clone https://github.com/alpacahq/alpaca-mcp-server.git
-cd alpaca-mcp-server
+git clone https://github.com/idsts2670/tmp_alpaca_mcp_server
+cd tmp_alpaca_mcp_server
 ```
 
 ## Quick Start
@@ -60,7 +60,7 @@ cd alpaca-mcp-server
 To set up Alpaca MCP Server quickly, execute the following commands in your terminal:
 
   ```bash
-  cd alpaca-mcp-server
+  cd tmp_alpaca_mcp_server
   python3 install.py
   ```
 
