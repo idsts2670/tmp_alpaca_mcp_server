@@ -202,19 +202,17 @@ def install_dependencies(uv_path: str, venv_path: Path, project_dir: Path):
         print(f"   ❌ Error: requirements.txt not found at {requirements_file}")
         sys.exit(1)
 
-    # Use the virtual environment's Python to install dependencies
-    # This ensures we're using the correct Python version and environment
-    venv_python = get_venv_python(venv_path)
+    # Use uv pip install as specified in README.md manual steps
+    # uv pip automatically detects and uses the .venv folder when run from project directory
     install_cmd = [
-        str(venv_python),
-        "-m",
+        uv_path,
         "pip",
         "install",
         "-r",
         str(requirements_file),
     ]
 
-    if not run_command(install_cmd, "Install requirements with venv pip"):
+    if not run_command(install_cmd, "Install requirements with uv pip", cwd=str(project_dir)):
         print("   ❌ Failed to install dependencies")
         sys.exit(1)
 
