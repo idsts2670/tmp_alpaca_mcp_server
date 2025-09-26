@@ -63,67 +63,115 @@ def run_command(cmd: list, description: str, cwd: Optional[str] = None) -> bool:
         return False
 
 
-def get_python_executable() -> str:
-    """Get the appropriate Python executable name."""
-    # Try different Python executable names
-    python_names = ['python3', 'python']
-    
-    for name in python_names:
-        try:
-            result = subprocess.run([name, '--version'], capture_output=True, text=True)
-            if result.returncode == 0:
-                version = result.stdout.strip()
-                print(f"   Found Python: {name} ({version})")
-                return name
-        except FileNotFoundError:
-            continue
-    
-    print("   ❌ Error: Python not found. Please install Python 3.6+ first.")
-    sys.exit(1)
+UV_INSTALL_DOC_URL = "https://docs.astral.sh/uv/getting-started/installation/"
 
 
-def check_prerequisites():
-    """Check if required tools are available."""
+def is_uv_installed() -> Optional[str]:
+    """Return the path to uv if installed."""
+    return shutil.which("uv")
+
+
+def install_uv(method: str) -> bool:
+    """Install uv using the selected method."""
+    if method == "curl":
+        return run_command(
+            ["/bin/sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
+            "Install uv via curl"
+        )
+    if method == "wget":
+        return run_command(
+            ["/bin/sh", "-c", "wget -qO- https://astral.sh/uv/install.sh | sh"],
+            "Install uv via wget"
+        )
+    if method == "brew":
+        return run_command(
+            ["/usr/bin/env", "brew", "install", "uv"],
+            "Install uv via Homebrew"
+        )
+    if method == "pipx":
+        return run_command(
+            ["/usr/bin/env", "pipx", "install", "uv"],
+            "Install uv via pipx"
+        )
+    if method == "winget":
+        return run_command(
+            ["/usr/bin/env", "winget", "install", "--id=astral-sh.uv", "-e"],
+            "Install uv via WinGet"
+        )
+    if method == "scoop":
+        return run_command(
+            ["/usr/bin/env", "scoop", "install", "main/uv"],
+            "Install uv via Scoop"
+        )
+    return False
+
+
+def ensure_uv_installed() -> str:
+    """Ensure uv is installed, prompting the user to install it if necessary."""
     print_step(1, "Checking Prerequisites")
-    
-    # Check Python
-    python_cmd = get_python_executable()
-    
-    # Check Python version
-    try:
-        result = subprocess.run([python_cmd, '-c', 'import sys; print(sys.version_info[:2])'], 
-                              capture_output=True, text=True)
-        version_tuple = eval(result.stdout.strip())
-        if version_tuple < (3, 6):
-            print(f"   ❌ Error: Python {version_tuple[0]}.{version_tuple[1]} found, but Python 3.6+ is required")
+
+    uv_path = is_uv_installed()
+    if uv_path:
+        print(f"   ✅ Found uv: {uv_path}")
+        print()
+        return uv_path
+
+    print("   ❌ uv not found on PATH.")
+    print(f"   uv is recommended to install Python 3.10+ and project dependencies. See {UV_INSTALL_DOC_URL}")
+    print("   Installation methods available:")
+    print("   • curl, wget, brew (macOS/Linux)")
+    print("   • pipx (cross-platform)")
+    print("   • winget (Windows)")
+    print("   • scoop (Windows)")
+
+    install_methods = {"curl", "wget", "brew", "pipx", "winget", "scoop"}
+
+    while True:
+        choice = input("   Install uv now? Choose method [curl/wget/brew/pipx/winget/scoop] or type 'skip' to cancel: ").strip().lower()
+        if choice == "skip":
+            print("   ❌ uv installation skipped. Cannot continue without uv.")
             sys.exit(1)
-        print(f"   ✅ Python {version_tuple[0]}.{version_tuple[1]} is compatible")
-    except Exception as e:
-        print(f"   ❌ Error checking Python version: {e}")
-        sys.exit(1)
-    
+        if choice not in install_methods:
+            print("   Invalid choice. Please enter 'curl', 'wget', 'brew', 'pipx', 'winget', 'scoop', or 'skip'.")
+            continue
+
+        success = install_uv(choice)
+        if not success:
+            print("   ❌ uv installation failed. Please try another method.")
+            continue
+
+        uv_path = is_uv_installed()
+        if uv_path:
+            print(f"   ✅ uv installed successfully: {uv_path}")
+            print()
+            return uv_path
+
+        print("   ❌ uv still not found on PATH after installation. Please ensure it is installed and try again.")
+
+
+def check_prerequisites() -> str:
+    """Ensure uv is available and return its path."""
+    uv_path = ensure_uv_installed()
     print("   ✅ Prerequisites check completed")
     print()
-    return python_cmd
+    return uv_path
 
 
-def create_virtual_environment(python_cmd: str, project_dir: Path) -> Path:
-    """Create and return path to virtual environment."""
+def create_virtual_environment(uv_path: str, project_dir: Path) -> Path:
+    """Create and return path to virtual environment using uv."""
     print_step(2, "Creating Virtual Environment")
-    
+
     venv_path = project_dir / ".venv"
-    
-    # Remove existing venv if it exists
+
     if venv_path.exists():
         print(f"   Removing existing virtual environment at {venv_path}")
         shutil.rmtree(venv_path)
-    
-    # Create virtual environment
-    if not run_command([python_cmd, '-m', 'venv', str(venv_path)], 
-                      "Create virtual environment"):
+
+    create_cmd = [uv_path, "venv", "--python", "3.10", str(venv_path)]
+    if not run_command(create_cmd, "Create virtual environment with uv"):
         print("   ❌ Failed to create virtual environment")
         sys.exit(1)
-    
+
     print(f"   ✅ Virtual environment created at {venv_path}")
     print()
     return venv_path
@@ -138,28 +186,30 @@ def get_venv_python(venv_path: Path) -> Path:
         return venv_path / "bin" / "python"
 
 
-def install_dependencies(venv_path: Path, project_dir: Path):
-    """Install required dependencies."""
+def install_dependencies(uv_path: str, venv_path: Path, project_dir: Path):
+    """Install required dependencies using uv."""
     print_step(3, "Installing Dependencies")
-    
-    venv_python = get_venv_python(venv_path)
+
     requirements_file = project_dir / "requirements.txt"
-    
+
     if not requirements_file.exists():
         print(f"   ❌ Error: requirements.txt not found at {requirements_file}")
         sys.exit(1)
-    
-    # Upgrade pip first
-    if not run_command([str(venv_python), '-m', 'pip', 'install', '--upgrade', 'pip'], 
-                      "Upgrade pip"):
-        print("   ⚠️  Warning: Failed to upgrade pip, continuing anyway")
-    
-    # Install requirements
-    if not run_command([str(venv_python), '-m', 'pip', 'install', '-r', str(requirements_file)], 
-                      "Install requirements"):
+
+    install_cmd = [
+        uv_path,
+        "pip",
+        "--python",
+        str(get_venv_python(venv_path)),
+        "install",
+        "-r",
+        str(requirements_file),
+    ]
+
+    if not run_command(install_cmd, "Install requirements with uv"):
         print("   ❌ Failed to install dependencies")
         sys.exit(1)
-    
+
     print("   ✅ Dependencies installed successfully")
     print()
 
@@ -551,13 +601,13 @@ def main():
     
     try:
         # Check prerequisites
-        python_cmd = check_prerequisites()
+        uv_path = check_prerequisites()
         
         # Create virtual environment
-        venv_path = create_virtual_environment(python_cmd, project_dir)
+        venv_path = create_virtual_environment(uv_path, project_dir)
         
         # Install dependencies
-        install_dependencies(venv_path, project_dir)
+        install_dependencies(uv_path, venv_path, project_dir)
         
         # Get client selection
         selected_client = prompt_for_client()
