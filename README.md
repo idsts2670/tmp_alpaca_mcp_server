@@ -66,6 +66,50 @@ To set up Alpaca MCP Server quickly, execute the following commands in your term
 
 Our install script will guide you through set up with Claude Desktop or Cursor.
 
+### What the Installer Does
+
+The `install.py` script automates the entire setup process:
+
+1. **Check Prerequisites**
+   - Verifies `uv` is installed, prompts for installation if needed
+   - Supports curl, wget, brew, pipx, winget, or scoop
+
+2. **Create Virtual Environment**
+   - Creates isolated Python 3.10+ environment using `uv`
+   - Prevents conflicts with system Python
+
+3. **Install Dependencies**
+   - Installs packages using `uv` for faster installation
+   - All dependencies contained in virtual environment
+
+4. **Select MCP Client**
+   - Choose between Claude Desktop or Cursor IDE
+   - Can run installer multiple times for both clients
+
+5. **Configure API Keys**
+   - Prompts for Alpaca API credentials
+   - Sets up paper trading by default (safe for testing)
+
+6. **Create Environment File**
+   - Generates `.env` file with API configuration
+   - Includes all necessary environment variables
+
+7. **Update Client Configuration**
+   - Automatically updates MCP client configuration
+   - Creates backups of existing configurations
+
+8. **Final Instructions**
+   - Provides next steps to restart client and test integration
+   - Includes manual testing commands
+
+**Benefits:**
+- No Python version conflicts (uv handles Python 3.10+ automatically)
+- Isolated environment prevents dependency conflicts
+- Cross-platform support (macOS, Linux, Windows)
+- Automatic client configuration
+- Safe defaults (paper trading enabled)
+- Backup creation for existing configurations
+
 ## Advanced Instructions
 
 Manual installation.

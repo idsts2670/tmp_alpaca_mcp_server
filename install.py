@@ -4,13 +4,14 @@ Alpaca MCP Server Installation Script
 =====================================
 
 This script automates the setup of the Alpaca MCP Server for Claude Desktop
-by following the instructions in README.md.
+or Cursor IDE by following the instructions in README.md.
 
 Features:
-- Creates and activates virtual environment
-- Installs required dependencies
+- Checks for and installs uv (modern Python package manager)
+- Creates virtual environment with Python 3.10+
+- Installs required dependencies using uv
 - Creates .env file with API key prompts
-- Generates Claude Desktop configuration
+- Generates MCP client configuration
 - Cross-platform support (macOS, Linux, Windows)
 """
 
@@ -149,78 +150,22 @@ def ensure_uv_installed() -> str:
         print("   ❌ uv still not found on PATH after installation. Please ensure it is installed and try again.")
 
 
-def prompt_installation_type() -> str:
-    """Prompt user to choose between global or virtual environment installation."""
-    print_step(1, "Installation Type Selection")
-    
-    print("   Choose your installation method:")
-    print("   • Virtual Environment (recommended): Isolated dependencies, safer")
-    print("   • Global Installation: Simpler, but may conflict with other projects")
-    print()
-    
-    while True:
-        choice = input("   Enter your choice [venv/global]: ").strip().lower()
-        
-        if choice in ['venv', 'virtual', 'virtualenv']:
-            print("   ✅ Selected: Virtual Environment Installation")
-            print()
-            return "venv"
-        elif choice in ['global', 'system']:
-            print("   ✅ Selected: Global Installation")
-            print()
-            return "global"
-        else:
-            print("   Invalid choice. Please enter 'venv' or 'global'.")
-            continue
 
 
-def check_prerequisites_venv() -> str:
+def check_prerequisites() -> str:
     """Ensure uv is available for virtual environment installation."""
-    print_step(2, "Checking Prerequisites (Virtual Environment)")
+    print_step(1, "Checking Prerequisites")
     uv_path = ensure_uv_installed()
     print("   ✅ Prerequisites check completed")
     print()
     return uv_path
 
 
-def check_prerequisites_global() -> str:
-    """Check if pip is available for global installation."""
-    print_step(2, "Checking Prerequisites (Global Installation)")
-    
-    # Check Python version first
-    try:
-        result = subprocess.run(['python3', '-c', 'import sys; print(sys.version_info[:2])'], 
-                              capture_output=True, text=True)
-        version_tuple = eval(result.stdout.strip())
-        if version_tuple < (3, 10):
-            print(f"   ❌ Error: Python {version_tuple[0]}.{version_tuple[1]} found, but Python 3.10+ is required")
-            print("   Please upgrade Python or use virtual environment installation instead.")
-            print("   Virtual environment will install Python 3.10+ automatically.")
-            sys.exit(1)
-        print(f"   ✅ Python {version_tuple[0]}.{version_tuple[1]} is compatible")
-    except Exception as e:
-        print(f"   ❌ Error checking Python version: {e}")
-        sys.exit(1)
-    
-    # Use python3 -m pip to ensure we use the same Python version
-    try:
-        result = subprocess.run(['python3', '-m', 'pip', '--version'], capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"   ✅ Found pip via python3: {result.stdout.strip()}")
-            print("   ✅ Prerequisites check completed")
-            print()
-            return "python3 -m pip"
-    except FileNotFoundError:
-        pass
-    
-    print("   ❌ Error: pip not found. Please install pip first.")
-    print("   You can install pip by running: python3 -m ensurepip --upgrade")
-    sys.exit(1)
 
 
 def create_virtual_environment(uv_path: str, project_dir: Path) -> Path:
     """Create and return path to virtual environment using uv."""
-    print_step(3, "Creating Virtual Environment")
+    print_step(2, "Creating Virtual Environment")
 
     venv_path = project_dir / ".venv"
 
@@ -247,9 +192,9 @@ def get_venv_python(venv_path: Path) -> Path:
         return venv_path / "bin" / "python"
 
 
-def install_dependencies_venv(uv_path: str, venv_path: Path, project_dir: Path):
+def install_dependencies(uv_path: str, venv_path: Path, project_dir: Path):
     """Install required dependencies using uv in virtual environment."""
-    print_step(4, "Installing Dependencies (Virtual Environment)")
+    print_step(3, "Installing Dependencies")
 
     requirements_file = project_dir / "requirements.txt"
 
@@ -275,29 +220,6 @@ def install_dependencies_venv(uv_path: str, venv_path: Path, project_dir: Path):
     print()
 
 
-def install_dependencies_global(pip_cmd: str, project_dir: Path):
-    """Install required dependencies globally using pip."""
-    print_step(3, "Installing Dependencies (Global)")
-
-    requirements_file = project_dir / "requirements.txt"
-
-    if not requirements_file.exists():
-        print(f"   ❌ Error: requirements.txt not found at {requirements_file}")
-        sys.exit(1)
-
-    install_cmd = [
-        pip_cmd,
-        "install",
-        "-r",
-        str(requirements_file),
-    ]
-
-    if not run_command(install_cmd, "Install requirements globally with pip"):
-        print("   ❌ Failed to install dependencies")
-        sys.exit(1)
-
-    print("   ✅ Dependencies installed successfully globally")
-    print()
 
 
 def prompt_for_client() -> str:
@@ -411,18 +333,14 @@ STREAM_DATA_WSS = {api_config['STREAM_DATA_WSS']}
     print()
 
 
-def generate_mcp_config(project_dir: Path, venv_path: Optional[Path]) -> Dict[str, Any]:
+def generate_mcp_config(project_dir: Path, venv_path: Path) -> Dict[str, Any]:
     """Generate MCP server configuration."""
     # Get paths
     server_script = project_dir / "alpaca_mcp_server.py"
     
-    if venv_path:
-        # Virtual environment installation
-        venv_python = get_venv_python(venv_path)
-        command = str(venv_python)
-    else:
-        # Global installation - use system python
-        command = "python3"
+    # Virtual environment installation
+    venv_python = get_venv_python(venv_path)
+    command = str(venv_python)
     
     config = {
         "mcpServers": {
@@ -584,7 +502,7 @@ def update_client_configuration(selected_client: str, mcp_config: Dict[str, Any]
         return False
 
 
-def print_instructions(project_dir: Path, venv_path: Path, config: Dict[str, Any], selected_client: str, config_success: bool, install_type: str):
+def print_instructions(project_dir: Path, venv_path: Path, config: Dict[str, Any], selected_client: str, config_success: bool):
     """Print final setup instructions."""
     print_step(8, "Setup Complete - Next Steps")
     
@@ -621,11 +539,10 @@ def print_instructions(project_dir: Path, venv_path: Path, config: Dict[str, Any
         # Step 3: Optional testing
         print("   3️⃣  Optional - Test the server manually:")
         print(f"      cd {project_dir}")
-        if install_type == "venv":
-            if platform.system() == "Windows":
-                print(f"      {venv_path}\\Scripts\\activate")
-            else:
-                print(f"      source {venv_path}/bin/activate")
+        if platform.system() == "Windows":
+            print(f"      {venv_path}\\Scripts\\activate")
+        else:
+            print(f"      source {venv_path}/bin/activate")
         print(f"      python {server_script.name}")
         print("      (Press Ctrl+C to stop)")
         print()
@@ -673,10 +590,7 @@ def print_instructions(project_dir: Path, venv_path: Path, config: Dict[str, Any
     print("   💡 Additional Information:")
     print("      - The server uses paper trading by default (safe for testing)")
     print("      - To enable live trading, set ALPACA_PAPER_TRADE = False in .env")
-    if install_type == "venv":
-        print("      - Dependencies installed in virtual environment (.venv)")
-    else:
-        print("      - Dependencies installed globally")
+    print("      - Dependencies installed in virtual environment (.venv)")
     if config_success:
         print("      - Configuration backup was created automatically")
     print("      - To configure additional clients, run this script again")
@@ -698,26 +612,14 @@ def main():
     print()
     
     try:
-        # Ask user for installation type first
-        install_type = prompt_installation_type()
+        # Check uv prerequisites
+        uv_path = check_prerequisites()
         
-        # Handle installation based on user choice
-        if install_type == "venv":
-            # Check uv prerequisites for virtual environment
-            uv_path = check_prerequisites_venv()
-            
-            # Create virtual environment
-            venv_path = create_virtual_environment(uv_path, project_dir)
-            
-            # Install dependencies in virtual environment
-            install_dependencies_venv(uv_path, venv_path, project_dir)
-        else:
-            # Global installation - check pip prerequisites
-            pip_cmd = check_prerequisites_global()
-            venv_path = None
-            
-            # Install dependencies globally
-            install_dependencies_global(pip_cmd, project_dir)
+        # Create virtual environment
+        venv_path = create_virtual_environment(uv_path, project_dir)
+        
+        # Install dependencies in virtual environment
+        install_dependencies(uv_path, venv_path, project_dir)
         
         # Get client selection
         selected_client = prompt_for_client()
@@ -735,7 +637,7 @@ def main():
         config_success = update_client_configuration(selected_client, mcp_config, api_config)
         
         # Print final instructions
-        print_instructions(project_dir, venv_path, mcp_config, selected_client, config_success, install_type)
+        print_instructions(project_dir, venv_path, mcp_config, selected_client, config_success)
         
     except KeyboardInterrupt:
         print("\n\n❌ Installation cancelled by user")

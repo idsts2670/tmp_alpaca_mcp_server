@@ -1,0 +1,1 @@
+Repo root contains `alpaca_mcp_server.py` (main server), `install.py` (installer automation), `requirements.txt`, Dockerfile, `.env.example`, `.github` configs, `.cursor`/`.serena` metadata. No complex package structure; core scripts at root.
