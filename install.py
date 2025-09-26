@@ -187,24 +187,29 @@ def check_prerequisites_global() -> str:
     """Check if pip is available for global installation."""
     print_step(2, "Checking Prerequisites (Global Installation)")
     
-    # Check if pip is available
+    # Check Python version first
     try:
-        result = subprocess.run(['pip3', '--version'], capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"   ✅ Found pip3: {result.stdout.strip()}")
-            print("   ✅ Prerequisites check completed")
-            print()
-            return "pip3"
-    except FileNotFoundError:
-        pass
+        result = subprocess.run(['python3', '-c', 'import sys; print(sys.version_info[:2])'], 
+                              capture_output=True, text=True)
+        version_tuple = eval(result.stdout.strip())
+        if version_tuple < (3, 10):
+            print(f"   ❌ Error: Python {version_tuple[0]}.{version_tuple[1]} found, but Python 3.10+ is required")
+            print("   Please upgrade Python or use virtual environment installation instead.")
+            print("   Virtual environment will install Python 3.10+ automatically.")
+            sys.exit(1)
+        print(f"   ✅ Python {version_tuple[0]}.{version_tuple[1]} is compatible")
+    except Exception as e:
+        print(f"   ❌ Error checking Python version: {e}")
+        sys.exit(1)
     
+    # Use python3 -m pip to ensure we use the same Python version
     try:
-        result = subprocess.run(['pip', '--version'], capture_output=True, text=True)
+        result = subprocess.run(['python3', '-m', 'pip', '--version'], capture_output=True, text=True)
         if result.returncode == 0:
-            print(f"   ✅ Found pip: {result.stdout.strip()}")
+            print(f"   ✅ Found pip via python3: {result.stdout.strip()}")
             print("   ✅ Prerequisites check completed")
             print()
-            return "pip"
+            return "python3 -m pip"
     except FileNotFoundError:
         pass
     
