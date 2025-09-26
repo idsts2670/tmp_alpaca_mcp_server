@@ -173,8 +173,8 @@ def create_virtual_environment(uv_path: str, project_dir: Path) -> Path:
         print(f"   Removing existing virtual environment at {venv_path}")
         shutil.rmtree(venv_path)
 
-    create_cmd = [uv_path, "venv", "--python", "3.10", str(venv_path)]
-    if not run_command(create_cmd, "Create virtual environment with uv"):
+    create_cmd = [uv_path, "venv", "--python", "3.10", ".venv"]
+    if not run_command(create_cmd, "Create virtual environment with uv", cwd=str(project_dir)):
         print("   ❌ Failed to create virtual environment")
         sys.exit(1)
 
