@@ -1,1 +1,0 @@
-Python project without explicit lint/format config in repo. Follow standard Python style (PEP 8). Keep modifications minimal per workspace rules. No custom type-hinting requirements stated.

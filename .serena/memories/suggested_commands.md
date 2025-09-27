@@ -1,1 +1,0 @@
-Setup/install: `python install.py` (runs scripted setup). Manual virtual env: `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`. Run server: `python alpaca_mcp_server.py`. Docker build/run: `docker build -t alpaca-mcp-server .`, `docker run ...`.
