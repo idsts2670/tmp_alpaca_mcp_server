@@ -32,6 +32,18 @@ def print_header():
     print("🚀 Alpaca MCP Server Installation Script")
     print("=" * 60)
     print()
+    print("⚠️  DEPRECATION NOTICE:")
+    print("   This installation method is deprecated.")
+    print("   Please use the new modern installation method:")
+    print()
+    print("   uvx alpaca-mcp-server init")
+    print()
+    print("   Benefits: Faster, simpler, no virtual environment needed")
+    print("   See: https://github.com/idsts2670/alpaca-mcp-server#quick-start-new")
+    print()
+    print("   This script will continue to work but may be removed in future versions.")
+    print("=" * 60)
+    print()
 
 
 def print_step(step_num: int, description: str):
